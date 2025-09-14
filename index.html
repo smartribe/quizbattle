@@ -1,41 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Quiz Battle</title>
-    <link rel="stylesheet" href="style.css" />
-  </head>
-  <body>
-    <!-- Lobby Section -->
-    <div id="lobby">
-      <h1>🎮 QUiz Battle</h1>
-      <input type="text" id="username" placeholder="Enter your username" />
-      <input
-        type="text"
-        id="roomId"
-        placeholder="Enter room ID (or create one)"
-      />
-      <button id="createRoomBtn" onclick="createRoom()">Create Room</button>
-      <button id="joinRoomBtn" onclick="joinRoom()">Join Room</button>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quiz Battle Leaderboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Lobby -->
+  <div id="lobby" class="card">
+    <h1>🎮 Quiz Battle</h1>
+    <input id="username" placeholder="Enter your name">
+
+    <div id="joinSection">
+      <input id="roomId" placeholder="Enter Room ID to join">
+      <button onclick="joinRoom()">Join Room</button>
     </div>
 
-    <!-- Game Section -->
-    <div id="game" style="display: none">
-      <h2 id="roomTitle"></h2>
-      <h3 id="questionText"></h3>
-      <div id="options"></div>
-      <p id="timer"></p>
-      <ul id="scoreBoard"></ul>
-    </div>
+    <button onclick="createRoom()">Create Room</button>
+  </div>
 
-    <!-- Results Section -->
-    <div id="results" style="display: none">
-      <h2>🏆Game Over</h2>
-      <h3 id="winner"></h3>
-      <button onclick="restart()"></button>
-    </div>
+  <!-- Quiz -->
+  <div id="quiz" class="card">
+    <h2 id="question">Question</h2>
+    <div id="answers"></div>
+    <button id="nextBtn" onclick="nextQuestion()" style="display:none;">Next</button>
+  </div>
 
-    <script type="module" src="app.js"></script>
-  </body>
+  <!-- Leaderboard -->
+  <div id="scoreboard" class="card"></div>
+
+  <script type="module" src="app.js"></script>
+</body>
 </html>

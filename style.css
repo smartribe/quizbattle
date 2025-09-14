@@ -1,20 +1,55 @@
 body {
   font-family: Arial, sans-serif;
+  background: #f5f7fa;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
   margin: 0;
-  padding: 20px;
-  background-color: #f9f9f9;
+}
+.card {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+  max-width: 400px;
+  width: 100%;
   text-align: center;
 }
 input,
 button {
-  margin: 10px;
+  width: 90%;
   padding: 10px;
-  font-size: 16px;
+  margin: 8px 0;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
 }
-#options button {
-  display: block;
-  padding: 10px 10px;
-  margin: 10px auto;
+button {
+  background: #007bff;
+  color: #fff;
   cursor: pointer;
-  width: 200px;
+  border: none;
+}
+button:hover {
+  background: #0056b3;
+}
+#quiz,
+#scoreboard {
+  display: none;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+th,
+td {
+  border: 1px solid #ccc;
+  padding: 6px;
+  text-align: center;
+}
+th {
+  background: #007bff;
+  color: white;
 }

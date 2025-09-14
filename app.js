@@ -1,212 +1,174 @@
+// =========================
+// 1. Firebase Setup (Modular SDK)
+// =========================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
 import {
-  set,
   getDatabase,
   ref,
-  push,
-  onValue,
-  remove,
+  set,
   update,
+  onValue,
+  get,
+  child,
+  runTransaction,
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
-// Your web app's Firebase configuration
+//  web app's Firebase configuration
 
 const firebaseConfig = {
   apiKey: "AIzaSyDPUYlUhOa_JfIFX38RIbH84H_S-yVVdNA",
   authDomain: "quizbattle-24ba2.firebaseapp.com",
+  databaseURL:
+    "https://quizbattle-24ba2-default-rtdb.europe-west1.firebasedatabase.app",
   projectId: "quizbattle-24ba2",
   storageBucket: "quizbattle-24ba2.firebasestorage.app",
   messagingSenderId: "28658796585",
   appId: "1:28658796585:web:6abbc29bb98616c5867438",
 };
 
-// Initialize Firebase
+// Init Firebase
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-//====================================
-// Global Variables
-//====================================
-let playerName = "";
-let roomId = "";
-let currentQuestionIndex = 1;
-let timerInterval;
+// -------------------
+// GAME STATE
+// -------------------
+let currentRoomId = "";
+let username = "";
+let score = 0;
+let currentQuestion = 0;
 
-document.addEventListener("DOMContentLoaded", () => {
-  //====================================
-  // Create Room
-  //====================================
-  function createRoom() {
-    playerName = document.getElementById("playerName").value.trim();
-    (roomId = getElementById("roomId").value.trim() || Math),
-      random().toString(36).substring(2, 8).toUpperCase();
+const questions = [
+  { q: "What is 2 + 2?", options: ["3", "4", "5"], answer: "4" },
+  {
+    q: "Capital of France?",
+    options: ["London", "Paris", "Berlin"],
+    answer: "Paris",
+  },
+  {
+    q: "HTML stands for?",
+    options: [
+      "HyperText Markup Language",
+      "Home Tool Markup Language",
+      "Hot Mail",
+    ],
+    answer: "HyperText Markup Language",
+  },
+  {
+    q: "CSS is used for?",
+    options: ["Styling", "Database", "Networking"],
+    answer: "Styling",
+  },
+  { q: "What is 5 x 6?", options: ["30", "20", "25"], answer: "30" },
+];
 
-    if (!playerName) {
-      alert("Please enter your name.");
-      return;
-    }
+// -------------------
+// ROOM FUNCTIONS
+// -------------------
+function generateRoomId() {
+  return Math.random().toString(36).substring(2, 7).toUpperCase();
+}
 
-    // Create room in Firebase
-    db.ref("rooms/" + roomId).set({
-      currentQuestion: 1,
-      players: {
-        player1: { name: playerName, score: 0 },
-      },
-      questions: {
-        1: {
-          question: "What is the capital of France?",
-          options: ["Berlin", "Madrid", "Paris", "Rome"],
-          answer: 2,
-        },
-        2: {
-          question: "What is 2 + 2?",
-          options: ["3", "4", "5", "6"],
-          answer: 1,
-        },
-        3: {
-          question: "What is the largest planet in our solar system?",
-          options: ["Earth", "Mars", "Jupiter", "Saturn"],
-          answer: 2,
-        },
-      },
-    });
-    joinRoom(); // Auto Join to room after creating
+export function createRoom() {
+  username = document.getElementById("username").value.trim();
+  if (!username) return alert("Enter your name first!");
+
+  currentRoomId = generateRoomId();
+
+  set(ref(db, "rooms/" + currentRoomId), {
+    players: {},
+  });
+
+  alert("Room Created! Share this Room ID: " + currentRoomId);
+  startQuiz();
+}
+
+export function joinRoom() {
+  username = document.getElementById("username").value.trim();
+  currentRoomId = document.getElementById("roomId").value.trim();
+  if (!username || !currentRoomId) return alert("Enter your name and room ID!");
+
+  startQuiz();
+}
+
+// -------------------
+// QUIZ FUNCTIONS
+// -------------------
+function startQuiz() {
+  document.getElementById("lobby").style.display = "none";
+  document.getElementById("quiz").style.display = "block";
+  document.getElementById("scoreboard").style.display = "block";
+  score = 0;
+  currentQuestion = 0;
+  showQuestion();
+  listenToLeaderboard(currentRoomId);
+}
+
+function showQuestion() {
+  if (currentQuestion >= questions.length) {
+    endQuiz();
+    return;
   }
-  //====================================
-  //Restart
-  function restartGame() {
-    location.reload();
-  }
-  //====================================
-  // Join Room
-  //====================================
-  function joinRoom() {
-    playerName = document.getElementById("playerName").value.trim();
-    roomId = document.getElementById("roomId").value.trim();
+  const q = questions[currentQuestion];
+  document.getElementById("question").textContent = q.q;
+  const answersDiv = document.getElementById("answers");
+  answersDiv.innerHTML = "";
+  q.options.forEach((opt) => {
+    const btn = document.createElement("button");
+    btn.textContent = opt;
+    btn.onclick = () => selectAnswer(opt, q.answer);
+    answersDiv.appendChild(btn);
+  });
+  document.getElementById("nextBtn").style.display = "none";
+}
 
-    if (!playerName || !roomId) {
-      alert("Please enter your name and room ID.");
-      return;
-    }
+function selectAnswer(choice, correct) {
+  if (choice === correct) score++;
+  document.getElementById("nextBtn").style.display = "block";
+}
 
-    //Add player to room in Firebase
-    db.ref(`rooms/${roomId}/players/${playerName}`).set({ score: 0 });
+function nextQuestion() {
+  currentQuestion++;
+  showQuestion();
+}
 
-    //Switch UI to game screen
-    document.getElementById("lobby").style.display = "none";
-    document.getElementById("game").style.display = "block";
-    document.getElementById("roomTitle").innerText = "Room " + roomId;
+function endQuiz() {
+  // Save score to Firebase under this player
+  update(ref(db, "rooms/" + currentRoomId + "/players"), {
+    [username]: { score: score },
+  });
 
-    // Listen for game state changes
-    listenForGameState();
-  }
-  //====================================
-  // Listen for Game State Changes
-  //====================================
-  function listenForGameState() {
-    db.ref("rooms/" + roomId).on("value", (snapshot) => {
-      const roomData = snapshot.val();
-      if (!roomData) {
-        alert("Room does not exist.");
-        location.reload();
-        return;
-      }
-      //Show Scoreboard
-      const question = roomData.questions[roomData.currentQuestion];
-      if (question) {
-        showQuestion(question);
+  document.getElementById("quiz").style.display = "none";
+}
 
-        //update scores
-        const players = roomData.players || {};
-        const scoreBoard = document.getElementById("scoreBoard");
-        scoreBoard.innerHTML = "";
+// -------------------
+// LEADERBOARD
+// -------------------
+function listenToLeaderboard(roomId) {
+  const playersRef = ref(db, "rooms/" + roomId + "/players");
 
-        for (const player in players) {
-          let li = document.createElement("li");
-          li.innerText = `${players[player].name}: ${players[player].score}`;
-          scoreBoard.appendChild(li);
-        }
-
-        //If all questions answered, end game
-        if (roomData.currentQuestion > Object.keys(roomData.questions).length) {
-          endGame(players);
-        }
-      }
-    });
-  }
-  //====================================
-  // Show Question
-  function showQuestion(questionData) {
-    const questionElem = document.getElementById("questionText");
-    const optionsElem = document.getElementById("options");
-
-    optionsElem.innerHTML = "";
-    questionElem.innerText = questionData.question;
-
-    questionData.options.forEach((option, index) => {
-      let button = document.createElement("button");
-      button.innerText = option;
-      button.onclick = () => answerQuestion(index);
-      optionsElem.appendChild(button);
-    });
-    //Start Timer
-    startTimer(10); //10 Seconds
-  }
-
-  //====================================
-  //Submit answer
-  function submitAnswer(answer, correct) {
-    if (answer === correct) {
-      //Update score in Firebase
-      db.ref(`rooms/${roomId}/players/${playerName}/score`).transaction(
-        (score) => (score || 0) + 1
-      );
-    }
-    //Move to next question
-    if (playerName) {
-      db.ref(`rooms/${roomId}/currentQuestion`)
-        .once("value")
-        .then((snapshot) => {
-          const currentQuestion = snapshot.val() || 1;
-          db.ref(`rooms/${roomId}/currentQuestion`).set(currentQuestion + 1);
-        });
-    }
-  }
-
-  //====================================
-  //Start timer function
-
-  function startTimer(seconds) {
-    clearInterval(timerInterval);
-    let timeLeft = seconds;
-    document.getElementById("timer").innerText = `Time Left: ${timeLeft}s`;
-    timerInterval = setInterval(() => {
-      timeLeft--;
-      document.getElementById("timer").innerText = `Time Left: ${timeLeft}s`;
-      if (timeLeft <= 0) {
-        clearInterval(timerInterval);
-        //auto move to next question
-        db.ref(`rooms/${roomId}/currentQuestion`).once("value", (snapshot) => {
-          const next = snapshot.val() + 1;
-          db.ref(`rooms/${roomId}/currentQuestion`).set(next);
-        });
-      }
-    }, 1000);
-  }
-  //====================================
-  //End Game
-  function endGame(players) {
-    document.getElementById("game").style.display = "none";
-
-    document.getElementById("results").style.display = "block";
-
-    //Find winner
-    let winner = Object.keys(players).reduce((a, b) =>
-      players[a].score > players[b].score ? a : b
+  onValue(playersRef, (snapshot) => {
+    const players = snapshot.val() || {};
+    const sorted = Object.entries(players).sort(
+      (a, b) => b[1].score - a[1].score
     );
-    document.getElementById(
-      "winner"
-    ).innerText = `Winner is ${players[winner].name} with players[winner].score} points!`;
-  }
-});
-//====================================
+
+    let table =
+      "<h2>🏆 Leaderboard</h2><table><tr><th>Rank</th><th>Name</th><th>Score</th></tr>";
+    sorted.forEach(([name, data], i) => {
+      table += `<tr><td>${i + 1}</td><td>${name}</td><td>${
+        data.score
+      }</td></tr>`;
+    });
+    table += "</table>";
+
+    document.getElementById("scoreboard").innerHTML = table;
+  });
+}
+// Expose functions to HTML
+window.createRoom = createRoom;
+window.joinRoom = joinRoom;
+window.nextQuestion = nextQuestion;
+// =========================
+// End of app.js
+// =========================
